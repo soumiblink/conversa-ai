@@ -2,7 +2,16 @@
 
 import { useRef, useState } from "react";
 
-export function useMicrophone() {
+export type TranscriptEntry = {
+  text: string;
+  timestamp: string;
+};
+
+type Options = {
+  onChunk: (blob: Blob) => void;
+};
+
+export function useMicrophone({ onChunk }: Options) {
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -11,28 +20,27 @@ export function useMicrophone() {
   const start = async () => {
     setError(null);
 
-    // Check browser support
     if (!navigator.mediaDevices?.getUserMedia) {
       setError("Microphone not supported in this browser.");
       return;
     }
 
     try {
-      // Request mic permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 
-      // Log each audio chunk as it arrives
+      // Fire onChunk callback for each audio chunk
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           console.log("Audio chunk received:", e.data);
+          onChunk(e.data);
         }
       };
 
-      // Start recording, emit a chunk every 30 seconds
+      // Emit a chunk every 30 seconds
       recorder.start(30000);
       setIsRecording(true);
     } catch (err: unknown) {
@@ -46,7 +54,6 @@ export function useMicrophone() {
 
   const stop = () => {
     mediaRecorderRef.current?.stop();
-    // Stop all tracks to release the mic
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setIsRecording(false);
   };
