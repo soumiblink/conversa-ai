@@ -2,29 +2,96 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMicrophone, TranscriptEntry } from "./hooks/useMicrophone";
+import { useSettings } from "./hooks/useSettings";
+import SuggestionsPanel, { SuggestionBatch, fetchSuggestions } from "./components/SuggestionsPanel";
+import ChatPanel, { ChatMessage, fetchChatResponse } from "./components/ChatPanel";
+import SettingsModal from "./components/SettingsModal";
+import { exportSession } from "./utils/exportSession";
 
 async function transcribeChunk(blob: Blob): Promise<string> {
-  // Wrap blob in a File so the API route can read it
   const file = new File([blob], "audio.webm", { type: blob.type || "audio/webm" });
   const form = new FormData();
   form.append("audio", file);
-
   const res = await fetch("/api/transcribe", { method: "POST", body: form });
   const data = await res.json();
-
   if (!res.ok) throw new Error(data.error ?? "Transcription failed.");
   return data.text as string;
 }
 
+const SUGGEST_INTERVAL_MS = 30000;
+
 export default function Home() {
+  const { settings, save, reset, loaded } = useSettings();
+  const [showSettings, setShowSettings] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestionBatch[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [isThinking, setIsThinking] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to latest transcript entry
+  const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const settingsRef = useRef(settings);
+  const isSuggestingRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
+
+  useEffect(() => {
+    if (loaded && !settings.apiKey) setShowSettings(true);
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const runSuggestions = async (isAuto = false) => {
+    if (isSuggestingRef.current) return;
+    if (transcriptRef.current.length === 0) return;
+    isSuggestingRef.current = true;
+    setSuggestError(null);
+    setIsSuggesting(true);
+    try {
+      const items = await fetchSuggestions(transcriptRef.current, settingsRef.current);
+      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setSuggestions((prev) => [{ timestamp, items }, ...prev]);
+    } catch (err) {
+      console.error("Suggest error:", err);
+      if (!isAuto) setSuggestError("Could not generate suggestions.");
+    } finally {
+      isSuggestingRef.current = false;
+      setIsSuggesting(false);
+    }
+  };
+
+  const handleGetSuggestions = () => runSuggestions(false);
+
+  const handleExport = () => {
+    const err = exportSession({ transcript, suggestions, chat });
+    setExportError(err);
+    if (err) setTimeout(() => setExportError(null), 3000);
+  };
+
+  const handleSend = async (text: string) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    setChat((prev) => [...prev, { role: "user", text, timestamp }]);
+    setIsThinking(true);
+    try {
+      const response = await fetchChatResponse(text, transcriptRef.current, chat, settingsRef.current);
+      const ts = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setChat((prev) => [...prev, { role: "assistant", text: response, timestamp: ts }]);
+    } catch {
+      const ts = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setChat((prev) => [...prev, { role: "assistant", text: "Something went wrong.", timestamp: ts }]);
+    } finally {
+      setIsThinking(false);
+    }
+  };
 
   const handleChunk = async (blob: Blob) => {
     setIsTranscribing(true);
@@ -32,94 +99,129 @@ export default function Home() {
       const text = await transcribeChunk(blob);
       const timestamp = new Date().toLocaleTimeString();
       setTranscript((prev) => [...prev, { text, timestamp }]);
-    } catch (err) {
-      console.error("Transcription error:", err);
+    } catch {
       const timestamp = new Date().toLocaleTimeString();
-      setTranscript((prev) => [
-        ...prev,
-        { text: "[Transcription failed for this chunk]", timestamp },
-      ]);
+      setTranscript((prev) => [...prev, { text: "[Transcription failed, try again]", timestamp }]);
     } finally {
       setIsTranscribing(false);
     }
   };
 
-  const { isRecording, error, start, stop } = useMicrophone({ onChunk: handleChunk });
+  const { isRecording, error: micError, start, stop } = useMicrophone({ onChunk: handleChunk });
+
+  useEffect(() => {
+    if (isRecording) {
+      setIsAutoRefreshing(true);
+      intervalRef.current = setInterval(() => runSuggestions(true), SUGGEST_INTERVAL_MS);
+    } else {
+      setIsAutoRefreshing(false);
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white text-gray-800">
-      {/* Column 1 - Transcript */}
-      <div className="flex flex-1 flex-col border-r border-gray-200">
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Transcript</h2>
-        </div>
+    <>
+      {showSettings && (
+        <SettingsModal
+          settings={settings}
+          onSave={(s) => { save(s); setShowSettings(false); }}
+          onReset={reset}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
 
-        {/* Mic controls */}
-        <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3">
-          <button
-            onClick={isRecording ? stop : start}
-            className={`rounded-md px-4 py-2 text-sm font-medium text-white transition-colors ${
-              isRecording ? "bg-red-500 hover:bg-red-600" : "bg-gray-800 hover:bg-gray-700"
-            }`}
-          >
-            {isRecording ? "Stop Recording" : "Start Recording"}
-          </button>
+      <div className="flex flex-col h-screen bg-neutral-50 text-gray-900">
+        {/* Header */}
+        <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
+          <div>
+            <h1 className="text-base font-semibold text-gray-900">Conversa AI</h1>
+            <p className="text-xs text-gray-400">Real-time conversation intelligence</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {exportError && <span className="text-xs text-red-400">{exportError}</span>}
+            <button
+              onClick={handleExport}
+              disabled={!transcript.length && !suggestions.length && !chat.length}
+              className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Export
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+            >
+              Settings
+            </button>
+          </div>
+        </header>
 
-          {isRecording && (
-            <span className="flex items-center gap-1.5 text-sm text-red-500">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-red-500" />
-              Recording...
-            </span>
-          )}
+        {/* Columns */}
+        <div className="flex flex-1 overflow-hidden gap-4 p-4">
 
-          {isTranscribing && (
-            <span className="text-sm text-gray-400">Transcribing...</span>
-          )}
-
-          {error && <span className="text-sm text-red-400">{error}</span>}
-        </div>
-
-        {/* Transcript entries */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {transcript.length === 0 && (
-            <p className="text-sm text-gray-400">Transcript will appear here...</p>
-          )}
-          {transcript.map((entry, i) => (
-            <div key={i} className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
-              <p className="text-xs text-gray-400 mb-1">{entry.timestamp}</p>
-              <p className="text-sm text-gray-700">{entry.text}</p>
+          {/* Column 1 - Transcript */}
+          <div className="flex flex-1 flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Transcript</h2>
+              <div className="flex items-center gap-2">
+                {isTranscribing && (
+                  <span className="text-xs text-gray-400 animate-pulse">Transcribing...</span>
+                )}
+                {micError && <span className="text-xs text-red-400">{micError}</span>}
+              </div>
             </div>
-          ))}
-          <div ref={transcriptEndRef} />
-        </div>
-      </div>
 
-      {/* Column 2 - Suggestions */}
-      <div className="flex flex-1 flex-col border-r border-gray-200">
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Suggestions</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          {/* Suggestion cards go here */}
-        </div>
-      </div>
+            {/* Mic controls */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+              <button
+                onClick={isRecording ? stop : start}
+                className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
+                  isRecording ? "bg-red-500 hover:bg-red-600" : "bg-gray-900 hover:bg-gray-700"
+                }`}
+              >
+                {isRecording ? "Stop Recording" : "Start Recording"}
+              </button>
+              {isRecording && (
+                <span className="flex items-center gap-1.5 text-xs text-red-500">
+                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  Recording...
+                </span>
+              )}
+            </div>
 
-      {/* Column 3 - Chat */}
-      <div className="flex flex-1 flex-col">
-        <div className="border-b border-gray-200 px-4 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Chat</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          {/* Chat messages go here */}
-        </div>
-        <div className="border-t border-gray-200 p-4">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {transcript.length === 0 && (
+                <p className="text-sm text-gray-400">Transcript will appear here...</p>
+              )}
+              {transcript.map((entry, i) => (
+                <div key={i} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  <p className="text-xs text-gray-400 mb-1">{entry.timestamp}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{entry.text}</p>
+                </div>
+              ))}
+              <div ref={transcriptEndRef} />
+            </div>
+          </div>
+
+          {/* Column 2 - Suggestions */}
+          <SuggestionsPanel
+            transcript={transcript}
+            suggestions={suggestions}
+            isSuggesting={isSuggesting}
+            isAutoRefreshing={isAutoRefreshing}
+            error={suggestError}
+            onRefresh={handleGetSuggestions}
+            onSuggestionClick={handleSend}
+          />
+
+          {/* Column 3 - Chat */}
+          <ChatPanel
+            chat={chat}
+            onSend={handleSend}
+            isThinking={isThinking}
           />
         </div>
       </div>
-    </div>
+    </>
   );
 }
