@@ -45,7 +45,6 @@ export default function Home() {
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
-
   useEffect(() => {
     if (loaded && !settings.apiKey) setShowSettings(true);
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -60,16 +59,13 @@ export default function Home() {
       const items = await fetchSuggestions(transcriptRef.current, settingsRef.current);
       const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       setSuggestions((prev) => [{ timestamp, items }, ...prev]);
-    } catch (err) {
-      console.error("Suggest error:", err);
+    } catch {
       if (!isAuto) setSuggestError("Could not generate suggestions.");
     } finally {
       isSuggestingRef.current = false;
       setIsSuggesting(false);
     }
   };
-
-  const handleGetSuggestions = () => runSuggestions(false);
 
   const handleExport = () => {
     const err = exportSession({ transcript, suggestions, chat });
@@ -131,25 +127,25 @@ export default function Home() {
         />
       )}
 
-      <div className="flex flex-col h-screen bg-neutral-50 text-gray-900">
+      <div className="flex flex-col h-screen bg-neutral-950 text-neutral-100">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
+        <header className="flex items-center justify-between px-6 py-3 bg-neutral-900 border-b border-neutral-800 shrink-0">
           <div>
-            <h1 className="text-base font-semibold text-gray-900">Conversa AI</h1>
-            <p className="text-xs text-gray-400">Real-time conversation intelligence</p>
+            <h1 className="text-sm font-semibold text-white">Conversa AI</h1>
+            <p className="text-xs text-neutral-400">Real-time conversation intelligence</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {exportError && <span className="text-xs text-red-400">{exportError}</span>}
             <button
               onClick={handleExport}
               disabled={!transcript.length && !suggestions.length && !chat.length}
-              className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="text-xs text-neutral-400 hover:text-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Export
             </button>
             <button
               onClick={() => setShowSettings(true)}
-              className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+              className="text-xs text-neutral-400 hover:text-neutral-100 transition-colors"
             >
               Settings
             </button>
@@ -159,31 +155,30 @@ export default function Home() {
         {/* Columns */}
         <div className="flex flex-1 overflow-hidden gap-4 p-4">
 
-          {/* Column 1 - Transcript */}
-          <div className="flex flex-1 flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Transcript</h2>
+          {/* Transcript */}
+          <div className="flex flex-1 flex-col bg-neutral-900 rounded-xl border border-neutral-800 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Transcript</h2>
               <div className="flex items-center gap-2">
-                {isTranscribing && (
-                  <span className="text-xs text-gray-400 animate-pulse">Transcribing...</span>
-                )}
+                {isTranscribing && <span className="text-xs text-yellow-400 animate-pulse">Transcribing...</span>}
                 {micError && <span className="text-xs text-red-400">{micError}</span>}
               </div>
             </div>
 
-            {/* Mic controls */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-800">
               <button
                 onClick={isRecording ? stop : start}
-                className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
-                  isRecording ? "bg-red-500 hover:bg-red-600" : "bg-gray-900 hover:bg-gray-700"
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  isRecording
+                    ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                    : "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30"
                 }`}
               >
                 {isRecording ? "Stop Recording" : "Start Recording"}
               </button>
               {isRecording && (
-                <span className="flex items-center gap-1.5 text-xs text-red-500">
-                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="flex items-center gap-1.5 text-xs text-red-400">
+                  <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
                   Recording...
                 </span>
               )}
@@ -191,30 +186,28 @@ export default function Home() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {transcript.length === 0 && (
-                <p className="text-sm text-gray-400">Transcript will appear here...</p>
+                <p className="text-sm text-neutral-500">Transcript will appear here...</p>
               )}
               {transcript.map((entry, i) => (
-                <div key={i} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-400 mb-1">{entry.timestamp}</p>
-                  <p className="text-sm text-gray-700 leading-relaxed">{entry.text}</p>
+                <div key={i} className="rounded-lg border border-neutral-800 bg-neutral-800/50 px-3 py-2">
+                  <p className="text-xs text-neutral-500 mb-1">{entry.timestamp}</p>
+                  <p className="text-sm text-neutral-200 leading-relaxed">{entry.text}</p>
                 </div>
               ))}
               <div ref={transcriptEndRef} />
             </div>
           </div>
 
-          {/* Column 2 - Suggestions */}
           <SuggestionsPanel
             transcript={transcript}
             suggestions={suggestions}
             isSuggesting={isSuggesting}
             isAutoRefreshing={isAutoRefreshing}
             error={suggestError}
-            onRefresh={handleGetSuggestions}
+            onRefresh={() => runSuggestions(false)}
             onSuggestionClick={handleSend}
           />
 
-          {/* Column 3 - Chat */}
           <ChatPanel
             chat={chat}
             onSend={handleSend}

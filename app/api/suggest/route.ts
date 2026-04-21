@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const activePrompt = (prompt || DEFAULT_PROMPT).replace("{transcript}", recentText);
 
     const completion = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+      model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: activePrompt }],
       temperature: 0.7,
     });
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ suggestions });
   } catch (err) {
     console.error("Suggest error:", err);
-    return NextResponse.json({ error: "Failed to generate suggestions." }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: `Failed to generate suggestions: ${message}` }, { status: 500 });
   }
 }

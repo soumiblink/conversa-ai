@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       }));
 
     const completion = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+      model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: prompt || DEFAULT_SYSTEM_PROMPT },
         { role: "user", content: `Meeting transcript (recent):\n${recentTranscript}` },
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ text });
   } catch (err) {
     console.error("Chat error:", err);
-    return NextResponse.json({ error: "Failed to generate response." }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: `Failed to generate response: ${message}` }, { status: 500 });
   }
 }
