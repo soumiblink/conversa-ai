@@ -10,6 +10,15 @@
 
 ---
 
+## ✨ Overview
+
+Conversa AI is a real-time meeting assistant that listens to conversations, transcribes them, and continuously generates intelligent suggestions to help users respond more effectively.
+
+The system is designed to surface the **right information at the right time**, making conversations more productive, insightful, and actionable.
+
+---
+
+
 ## 📸 Screenshots
 
 ![Main Interface](./public/screenshots/Screenshot%202026-04-22%20203407.png)
@@ -20,13 +29,6 @@
 
 ---
 
-## ✨ Overview
-
-Conversa AI is a real-time meeting assistant that listens to conversations, transcribes them, and continuously generates intelligent suggestions to help users respond more effectively.
-
-The system is designed to surface the **right information at the right time**, making conversations more productive, insightful, and actionable.
-
----
 
 ## ⚡ Key Features
 

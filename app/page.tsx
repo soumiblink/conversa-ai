@@ -47,7 +47,7 @@ export default function Home() {
   }, [transcript]);
   useEffect(() => {
     if (loaded && !settings.apiKey) setShowSettings(true);
-  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loaded]); 
 
   const runSuggestions = async (isAuto = false) => {
     if (isSuggestingRef.current) return;
@@ -114,7 +114,7 @@ export default function Home() {
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isRecording]); 
 
   return (
     <>
@@ -152,10 +152,11 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Columns */}
+
+     
         <div className="flex flex-1 overflow-hidden gap-4 p-4">
 
-          {/* Transcript */}
+          
           <div className="flex flex-1 flex-col bg-neutral-900 rounded-xl border border-neutral-800 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Transcript</h2>

@@ -27,7 +27,7 @@ export function exportSession({ transcript, suggestions, chat }: ExportPayload):
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
-  // Format: conversa-session-YYYY-MM-DDTHH-MM-SS.json
+ 
   const ts = new Date().toISOString().replace(/:/g, "-").split(".")[0];
   const filename = `conversa-session-${ts}.json`;
 
@@ -36,9 +36,9 @@ export function exportSession({ transcript, suggestions, chat }: ExportPayload):
   a.download = filename;
   a.click();
 
-  // Cleanup
+  
   a.remove();
   URL.revokeObjectURL(url);
 
-  return null; // null = success
+  return null;
 }

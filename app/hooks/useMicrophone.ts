@@ -32,7 +32,7 @@ export function useMicrophone({ onChunk }: Options) {
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 
-      // Fire onChunk callback for each audio chunk
+      
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           console.log("Audio chunk received:", e.data);
@@ -40,7 +40,7 @@ export function useMicrophone({ onChunk }: Options) {
         }
       };
 
-      // Emit a chunk every 30 seconds
+      
       recorder.start(30000);
       setIsRecording(true);
     } catch (err: unknown) {

@@ -39,14 +39,13 @@ export default function SettingsModal({ settings, onSave, onReset, onClose }: Pr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-neutral-900 border border-neutral-800 shadow-xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Settings</h2>
           <button onClick={onClose} className="text-neutral-500 hover:text-neutral-100 text-lg leading-none transition-colors">✕</button>
         </div>
 
         <div className="px-6 py-5 space-y-6">
-          {/* API Key */}
+          
           <section className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">API Key</h3>
             <input
@@ -59,7 +58,7 @@ export default function SettingsModal({ settings, onSave, onReset, onClose }: Pr
             <p className="text-xs text-neutral-500">Stored in localStorage only. Never sent anywhere except Groq.</p>
           </section>
 
-          {/* Prompts */}
+          
           <section className="space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Prompts</h3>
 
@@ -85,7 +84,7 @@ export default function SettingsModal({ settings, onSave, onReset, onClose }: Pr
             </div>
           </section>
 
-          {/* Context Settings */}
+          
           <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Context Settings</h3>
             <div className="grid grid-cols-3 gap-4">
@@ -110,7 +109,7 @@ export default function SettingsModal({ settings, onSave, onReset, onClose }: Pr
           </section>
         </div>
 
-        {/* Footer */}
+        
         <div className="flex items-center justify-between border-t border-neutral-800 px-6 py-4">
           <button
             onClick={handleReset}

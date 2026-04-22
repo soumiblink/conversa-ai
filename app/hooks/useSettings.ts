@@ -6,9 +6,9 @@ export type AppSettings = {
   apiKey: string;
   suggestPrompt: string;
   chatPrompt: string;
-  suggestContextWindow: number; // number of transcript entries
-  chatContextWindow: number;    // number of transcript entries
-  chatHistoryLimit: number;     // number of chat messages
+  suggestContextWindow: number; 
+  chatContextWindow: number;    
+  chatHistoryLimit: number;     
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -64,7 +64,7 @@ export function useSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from localStorage on mount
+ 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -73,7 +73,7 @@ export function useSettings() {
         setSettings({ ...DEFAULT_SETTINGS, ...parsed });
       }
     } catch {
-      // Ignore parse errors, fall back to defaults
+     
     }
     setLoaded(true);
   }, []);
