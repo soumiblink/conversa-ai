@@ -39,6 +39,7 @@ export default function Home() {
   const settingsRef = useRef(settings);
   const isSuggestingRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasTriggeredFirstSuggestionsRef = useRef(false);
 
   useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
@@ -94,7 +95,20 @@ export default function Home() {
     try {
       const text = await transcribeChunk(blob);
       const timestamp = new Date().toLocaleTimeString();
-      setTranscript((prev) => [...prev, { text, timestamp }]);
+      const newEntry = { text, timestamp };
+
+      
+      transcriptRef.current = [...transcriptRef.current, newEntry];
+      setTranscript(transcriptRef.current);
+
+      console.log("Transcript updated:", transcriptRef.current);
+
+      
+      if (!hasTriggeredFirstSuggestionsRef.current) {
+        hasTriggeredFirstSuggestionsRef.current = true;
+        console.log("Triggering first suggestions, transcript length:", transcriptRef.current.length);
+        runSuggestions(true);
+      }
     } catch {
       const timestamp = new Date().toLocaleTimeString();
       setTranscript((prev) => [...prev, { text: "[Transcription failed, try again]", timestamp }]);
@@ -111,6 +125,7 @@ export default function Home() {
       intervalRef.current = setInterval(() => runSuggestions(true), SUGGEST_INTERVAL_MS);
     } else {
       setIsAutoRefreshing(false);
+      hasTriggeredFirstSuggestionsRef.current = false;
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
@@ -128,7 +143,20 @@ export default function Home() {
       )}
 
       <div className="flex flex-col h-screen bg-neutral-950 text-neutral-100">
-        {/* Header */}
+        
+        {isRecording && (
+          <div className="w-full bg-red-600 text-white text-center py-2 text-sm font-semibold tracking-wide shrink-0 flex items-center justify-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
+            Recording in progress
+          </div>
+        )}
+
+       
+        <div aria-live="polite" className="sr-only">
+          {isRecording ? "Recording started" : "Recording stopped"}
+        </div>
+
+        
         <header className="flex items-center justify-between px-6 py-3 bg-neutral-900 border-b border-neutral-800 shrink-0">
           <div>
             <h1 className="text-sm font-semibold text-white">Conversa AI</h1>
@@ -152,12 +180,12 @@ export default function Home() {
           </div>
         </header>
 
-
-     
         <div className="flex flex-1 overflow-hidden gap-4 p-4">
 
           
-          <div className="flex flex-1 flex-col bg-neutral-900 rounded-xl border border-neutral-800 shadow-sm overflow-hidden">
+          <div className={`flex flex-1 flex-col bg-neutral-900 rounded-xl shadow-sm overflow-hidden border-2 transition-colors duration-300 ${
+            isRecording ? "border-red-500" : "border-neutral-800"
+          }`}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Transcript</h2>
               <div className="flex items-center gap-2">
@@ -171,15 +199,15 @@ export default function Home() {
                 onClick={isRecording ? stop : start}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   isRecording
-                    ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                    ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 animate-pulse"
                     : "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30"
                 }`}
               >
                 {isRecording ? "Stop Recording" : "Start Recording"}
               </button>
               {isRecording && (
-                <span className="flex items-center gap-1.5 text-xs text-red-400">
-                  <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
                   Recording...
                 </span>
               )}

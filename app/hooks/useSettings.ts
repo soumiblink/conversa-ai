@@ -24,7 +24,7 @@ Instructions:
 - Generate exactly 3 suggestions, each serving a DIFFERENT purpose:
   1. A sharp, specific question the user can ask next
   2. A valuable insight, idea, or reframing
-  3. A clarification, risk, or next-step suggestion
+  3. A next step, risk, or clarifying action to take
 - Each suggestion must:
   - Be under 18 words
   - Be highly specific to the conversation

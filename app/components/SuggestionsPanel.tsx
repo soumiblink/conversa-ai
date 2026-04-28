@@ -4,7 +4,7 @@ import { TranscriptEntry } from "../hooks/useMicrophone";
 import { AppSettings } from "../hooks/useSettings";
 
 export type SuggestionItem = {
-  type: "question" | "insight" | "clarification" | "next_step";
+  type: "question" | "insight" | "next_step";
   text: string;
 };
 
@@ -14,10 +14,9 @@ export type SuggestionBatch = {
 };
 
 const typeBadge: Record<string, string> = {
-  question:      "bg-blue-500/10 text-blue-400",
-  insight:       "bg-green-500/10 text-green-400",
-  clarification: "bg-yellow-500/10 text-yellow-400",
-  next_step:     "bg-purple-500/10 text-purple-400",
+  question:  "bg-blue-500/10 text-blue-400",
+  insight:   "bg-green-500/10 text-green-400",
+  next_step: "bg-purple-500/10 text-purple-400",
 };
 
 async function fetchSuggestions(

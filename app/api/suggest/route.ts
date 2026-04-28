@@ -10,7 +10,7 @@ Transcript:
 Rules:
 - Suggestion 1 (type: "question"): A specific question the user can ask RIGHT NOW to move the conversation forward. Must be something not yet addressed.
 - Suggestion 2 (type: "insight"): A talking point or angle the user can raise — a non-obvious implication or connection they can speak to.
-- Suggestion 3 (type: "clarification"): A concrete response move — e.g. push back on an assumption, confirm a detail, or propose a clear next step the user can verbalize.
+- Suggestion 3 (type: "next_step"): A concrete response move — e.g. push back on an assumption, confirm a detail, or propose a clear next step the user can verbalize.
 - Each suggestion must feel like something the user could actually say next, not just observe.
 - Each under 20 words.
 - Be specific to the conversation — no generic filler.
@@ -20,7 +20,7 @@ Output ONLY valid JSON in this exact format, no extra text:
 [
   { "type": "question", "text": "..." },
   { "type": "insight", "text": "..." },
-  { "type": "clarification", "text": "..." }
+  { "type": "next_step", "text": "..." }
 ]`;
 
 export async function POST(req: NextRequest) {
@@ -53,7 +53,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid model response." }, { status: 500 });
     }
 
-    const suggestions = JSON.parse(match[0]);
+    const suggestions = JSON.parse(match[0]).map((item: { type: string; text: string }) => ({
+      
+      type: item.type === "clarification" ? "next_step" : item.type,
+      text: item.text,
+    }));
     return NextResponse.json({ suggestions });
   } catch (err) {
     console.error("Suggest error:", err);
